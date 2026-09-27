@@ -1,0 +1,12 @@
+node_modules/
+.env
+.env.*
+!.env.example
+dist/
+.data/
+.logs/
+coverage/
+*.log
+tsetmc-*-sample.json
+apps/web/.wrangler/
+apps/web/.vinext/

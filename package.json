@@ -1,0 +1,18 @@
+{
+  "name": "tablokhani", "version": "0.1.0", "private": true, "type": "module",
+  "scripts": {
+    "dev": "node scripts/dev.mjs",
+    "dev:api": "node --watch apps/api/main.ts",
+    "dev:web": "npm --prefix apps/web run dev -- --host 127.0.0.1 --port 3000",
+    "collector": "node apps/collector/main.ts",
+    "worker": "node apps/worker/main.ts",
+    "collect:once": "node apps/collector/main.ts --once",
+    "test": "node --test tests/*.test.ts",
+    "test:integration": "node --test tests/integration/*.test.ts",
+    "typecheck": "tsc --noEmit",
+    "build": "npm run typecheck && npm --prefix apps/web run build",
+    "start": "node apps/api/main.ts"
+  },
+  "dependencies": { "express": "^5.1.0", "mongodb": "^6.16.0", "dotenv": "^16.5.0", "helmet": "^8.1.0", "zod": "^3.24.0", "lossless-json": "^4.0.2" },
+  "devDependencies": { "@types/express": "^5.0.1", "@types/node": "^22.15.0", "typescript": "^5.9.3", "tsx": "^4.19.4" }
+}
