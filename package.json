@@ -1,5 +1,6 @@
 {
   "name": "tablokhani", "version": "0.1.0", "private": true, "type": "module",
+  "engines": { "node": ">=24.0.0" },
   "scripts": {
     "dev": "node scripts/dev.mjs",
     "dev:api": "node --watch apps/api/main.ts",
@@ -10,6 +11,8 @@
     "test": "node --test tests/*.test.ts",
     "test:integration": "node --test tests/integration/*.test.ts",
     "typecheck": "tsc --noEmit",
+    "typecheck:web": "tsc --noEmit -p apps/web/tsconfig.json",
+    "setup": "npm ci && npm --prefix apps/web ci",
     "build": "npm run typecheck && npm --prefix apps/web run build",
     "start": "node apps/api/main.ts"
   },

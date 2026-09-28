@@ -3,14 +3,15 @@ import helmet from 'helmet';
 import {z} from 'zod';
 import {randomUUID} from 'node:crypto';
 import type {Db} from 'mongodb';
-import {summarize,industries} from '../../packages/analytics/index.ts';
+import {summarize,industries,enrich} from '../../packages/analytics/index.ts';
 import {tradingDay} from '../../packages/shared/config.ts';
 export function createApp(db:Db){
  const app=express();app.disable('x-powered-by');app.use(helmet());app.use(express.json({limit:'32kb'}));
- app.use((req,res,next)=>{const origin=req.get('origin');if(origin&&!['http://127.0.0.1:3000','http://localhost:3000','http://127.0.0.1:4000'].includes(origin))return res.status(403).json({error:'Origin not allowed'});res.setHeader('Cache-Control','no-store');next();});
+ app.use((req,res,next)=>{if(!['127.0.0.1','localhost','[::1]'].includes(req.hostname))return res.status(403).json({error:'Host not allowed'});const origin=req.get('origin');if(origin&&!['http://127.0.0.1:3000','http://localhost:3000','http://127.0.0.1:4000'].includes(origin))return res.status(403).json({error:'Origin not allowed'});res.setHeader('Cache-Control','no-store');next();});
  async function market(){
    const state=await db.collection<any>('system_state').findOne({_id:'collector'});const worker=await db.collection<any>('system_state').findOne({_id:'worker'});
-   const quotes=worker?await db.collection<any>('published_quotes').find({batchId:worker.lastBatch}).sort({symbol:1}).toArray():[];
+   const stored=worker?await db.collection<any>('published_quotes').find({batchId:worker.lastBatch}).sort({symbol:1}).toArray():[];
+   const quotes=stored.map(q=>({...q,...enrich(q)}));
    return {source:'TSETMC',mode:'live',receivedAt:worker?.lastProcessedAt??null,stale:!worker?.lastProcessedAt||Date.now()-new Date(worker.lastProcessedAt).getTime()>60000,collector:state??{state:'waiting'},quotes,summary:summarize(quotes),industries:industries(quotes)};
  }
  app.get('/api/health',async(_req,res)=>{await db.command({ping:1});res.json({ok:true,database:'connected',source:'TSETMC',profile:'local-single-user'});});

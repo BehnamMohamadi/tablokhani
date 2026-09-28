@@ -998,6 +998,9 @@ export function SymbolDetail({ quote }: { quote: Quote | undefined }) {
   const q = quote;
   return (
     <>
+      {q.quality.includes('no-trades-in-snapshot') && <div className="method-note" role="status"><b>در این پاسخ، معامله‌ای برای نماد ثبت نشده است.</b><p>حجم و ارزش صفر، مقادیر گزارش‌شده منبع هستند. قیمت نمایش‌داده‌شده به‌معنای انجام معامله جدید نیست؛ درصد تغییر، سرانه‌ها و قدرت خریدار تا دریافت داده معتبر نمایش داده نمی‌شوند.</p></div>}
+      {q.quality.includes('client-volume-inconsistent') && <div className="method-note" role="status"><b>آمار حقیقی‌حقوقی با حجم معاملات هم‌خوان نیست.</b><p>برای جلوگیری از ترکیب آمار دوره‌های متفاوت، تعدادها و محاسبات وابسته موقتاً پنهان شده‌اند. خط تیره به‌معنای صفر نیست.</p></div>}
+      {q.quality.includes('client-data-missing') && !q.quality.includes('no-trades-in-snapshot') && <div className="method-note" role="status">TSETMC در این دریافت، اطلاعات حقیقی‌حقوقی این نماد را برنگردانده است؛ سرانه‌ها و قدرت خریدار قابل محاسبه نیستند.</div>}
       <section className="panel symbol-summary">
         <div>
           <span className="count-pill">{industryName(q.industry)}</span>

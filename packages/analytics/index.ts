@@ -2,9 +2,20 @@ import type {Quote,Signal} from '../shared/types.ts';
 import {tradingDay} from '../shared/config.ts';
 export const ratio=(a:number|null,b:number|null)=>a===null||b===null||b===0?null:a/b;
 export function enrich(q:Omit<Quote,'change'|'closeChange'|'buyPerCapita'|'sellPerCapita'|'power'|'netMoneyRial'>):Quote {
- const per=(v:number|null,c:number|null)=>v===null||q.close===null?null:ratio(v*q.close,c);
+ const quality=[...q.quality];
+ const noTrades=q.volume===0;
+ const inconsistent=q.volume!==null&&[q.buyVolume,q.sellVolume,q.legalBuyVolume,q.legalSellVolume].some(v=>v!==null&&v>q.volume!);
+ if(inconsistent&&!quality.includes('client-volume-inconsistent'))quality.push('client-volume-inconsistent');
+ if(noTrades&&!quality.includes('no-trades-in-snapshot'))quality.push('no-trades-in-snapshot');
+ const invalid=quality.includes('client-volume-inconsistent');
+ // Do not combine stale client counts with a reset market snapshot, including
+ // documents persisted by an older collector version.
+ if(invalid||noTrades)q={...q,buyVolume:null,sellVolume:null,buyCount:null,sellCount:null,legalBuyVolume:null,legalSellVolume:null};
+ q={...q,quality};
+ if(noTrades)q={...q,first:null,high:null,low:null};
+ const per=(v:number|null,c:number|null)=>invalid||v===null||q.close===null?null:ratio(v*q.close,c);
  const buy=per(q.buyVolume,q.buyCount),sell=per(q.sellVolume,q.sellCount);
- return {...q,change:q.previous&&q.last!==null?(q.last/q.previous-1)*100:null,closeChange:q.previous&&q.close!==null?(q.close/q.previous-1)*100:null,buyPerCapita:buy,sellPerCapita:sell,power:ratio(buy,sell),netMoneyRial:q.buyVolume!==null&&q.sellVolume!==null&&q.close!==null?((BigInt(q.buyVolume)-BigInt(q.sellVolume))*BigInt(q.close)).toString():null};
+ return {...q,change:!noTrades&&q.previous&&q.last!==null?(q.last/q.previous-1)*100:null,closeChange:!noTrades&&q.previous&&q.close!==null?(q.close/q.previous-1)*100:null,buyPerCapita:buy,sellPerCapita:sell,power:ratio(buy,sell),netMoneyRial:!invalid&&q.buyVolume!==null&&q.sellVolume!==null&&q.close!==null?((BigInt(q.buyVolume)-BigInt(q.sellVolume))*BigInt(q.close)).toString():null};
 }
 export function detectSignals(previous:Quote|undefined,current:Quote,batchId:string):Signal[] {
  if(!previous || tradingDay(new Date(previous.receivedAt))!==tradingDay(new Date(current.receivedAt)) || current.last===null) return [];

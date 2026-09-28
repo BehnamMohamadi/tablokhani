@@ -26,4 +26,4 @@ async function collect(){
    console.error(JSON.stringify({event:'collection_failed',message}));
  }finally{await db.collection<any>('locks').deleteOne({_id:'collector',owner});}
 }
-try{if(process.argv.includes('--once'))await collect();else while(!stopping){if(isMarketWindow())await collect();await new Promise(r=>setTimeout(r,config.POLL_INTERVAL_MS));}}finally{await client.close();}
+try{if(process.argv.includes('--once'))await collect();else {await collect();while(!stopping){await new Promise(r=>setTimeout(r,config.POLL_INTERVAL_MS));if(!stopping&&isMarketWindow())await collect();}}}finally{await client.close();}

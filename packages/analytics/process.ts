@@ -8,11 +8,8 @@ export async function processBatch(db:Db,batch:any){
  const quotes=batch.quotes as Quote[];const at=new Date(batch.at);const bucket=new Date(Math.floor(at.getTime()/60000)*60000);
  const signals=quotes.flatMap(q=>detectSignals(previous.get(q.id),q,batch._id));
  await db.collection<any>('market_snapshots').bulkWrite(quotes.map(q=>({updateOne:{filter:{_id:`${batch._id}:${q.id}`},update:{$setOnInsert:{...q,instrumentId:q.id,at,day:batch.day,expiresAt:new Date(at.getTime()+config.SNAPSHOT_RETENTION_DAYS*86400000)}},upsert:true}})));
- for(const q of quotes){
-   const samples=await db.collection<any>('market_snapshots').find({instrumentId:q.id,at:{$gte:bucket,$lt:new Date(bucket.getTime()+60000)}}).sort({at:1}).toArray();
-   const prices=samples.map(s=>s.last).filter((n):n is number=>typeof n==='number');
-   await db.collection('intraday_bars').updateOne({instrumentId:q.id,day:batch.day,bucket},{$set:{open:prices[0]??null,high:prices.length?Math.max(...prices):null,low:prices.length?Math.min(...prices):null,close:prices.at(-1)??null,samples:samples.length,quality:'sampled-not-trade-complete'}},{upsert:true});
- }
+ const bars=await db.collection('market_snapshots').aggregate([{$match:{at:{$gte:bucket,$lt:new Date(bucket.getTime()+60000)},last:{$type:'number'}}},{$sort:{at:1}},{$group:{_id:'$instrumentId',open:{$first:'$last'},close:{$last:'$last'},high:{$max:'$last'},low:{$min:'$last'},samples:{$sum:1}}}]).toArray();
+ if(bars.length)await db.collection('intraday_bars').bulkWrite(bars.map(({_id,...bar})=>({updateOne:{filter:{instrumentId:_id,day:batch.day,bucket},update:{$set:{...bar,quality:'sampled-not-trade-complete'}},upsert:true}})));
  if(signals.length)await db.collection<any>('signal_events').bulkWrite(signals.map(s=>({updateOne:{filter:{_id:s.id},update:{$setOnInsert:{...s,at:new Date(s.at),day:batch.day}},upsert:true}})));
  await db.collection('daily_stats').bulkWrite(quotes.map(q=>({updateOne:{filter:{instrumentId:q.id,day:batch.day},update:{$set:{...q,at,final:false}},upsert:true}})));
  await db.collection<any>('instruments').bulkWrite(quotes.map(q=>({updateOne:{filter:{_id:q.id},update:{$set:{symbol:q.symbol,name:q.name,industry:q.industry,updatedAt:at,source:'TSETMC'}},upsert:true}})));

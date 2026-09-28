@@ -14,6 +14,7 @@ export async function connect() {
       .collection("market_snapshots")
       .createIndex({ expiresAt: 1 }, { expireAfterSeconds: 0 }),
     db.collection("market_snapshots").createIndex({ instrumentId: 1, at: 1 }),
+    db.collection("market_snapshots").createIndex({ at: 1 }),
     db.collection("ingestion_batches").createIndex({ status: 1, at: 1 }),
     db
       .collection("intraday_bars")
